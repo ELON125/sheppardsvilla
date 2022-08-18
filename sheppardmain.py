@@ -15,16 +15,16 @@ import time
 from discord.utils import get
 import datetime
 from discord_components import Button, Select, SelectOption, ComponentsBot
-import datetime 
+import datetime
 from pygame import CONTROLLER_BUTTON_GUIDE
 from pymongo import MongoClient
 from collections import Counter
 import io
-import chat_exporter    
+import chat_exporter
 import requests
 
 #If its needed to split up commands just make a new file and just call a fuction in that file
-#For the showup check iterate through all signups and send a message in private channel with showup status and make the costum id in the button for the leaders the message id and change the status  
+#For the showup check iterate through all signups and send a message in private channel with showup status and make the costum id in the button for the leaders the message id and change the status
 client = ComponentsBot("!")
 client.Intents = discord.Intents.all()
 client.remove_command('help')
@@ -51,7 +51,7 @@ def get_db_info(db_name, searchName, searchValue, filter, guild_id):
                 approval_message = dbFind["approvalMessage"]
                 group_channel = dbFind["groupChannel"]
                 clan_discord = dbFind["clanDiscord"]
-                
+
 
             return {"acceptedMembers":accepted_members,"clanName":clan_name,"membersIDs":members_ids,"clanLeader":clan_leader,"clanID":clan_id,"discordServer":discord_server,"creationStatus":creation_status, 'statusMessage':status_message, 'approvalMessage':approval_message, 'groupChannel':group_channel,'clanDiscord':clan_discord}
 
@@ -68,7 +68,7 @@ async def fetch_players(interaction_message):
                 player_list.append(x.split('->')[1].replace('```','').replace(" ",""))
             except:pass
 
-        #Removing first element from list becuase its equal to @player -> player list 
+        #Removing first element from list becuase its equal to @player -> player list
         print(player_list)
 
         #Converting to dict
@@ -77,13 +77,47 @@ async def fetch_players(interaction_message):
             player_list_dict[f"{x+1}"] = player_list[x]
         print(player_list_dict)
 
-        #Returning the generated player list 
+        #Returning the generated player list
         return player_list_dict
+
 
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Game('Sheppardsvilla'))
     print(f"Villa bot is online")
+
+@client.command()
+async def playerlist(ctx):
+    #Defineing var
+    player_list = ''
+
+    #Iterating through all channgels and fetching the player list
+    for x in discord.utils.get(ctx.guild.channels, name= 'signup-tickets').channels:
+        messages = await x.history(limit=1, oldest_first = True).flatten()
+        players = await fetch_players(messages[0])
+
+        #Appending players to player list
+        player_list += f"{players['1']}\n{players['2']}\n{players['3']}\n{players['4']}\n{players['5']}\n{players['6']}\n{players['7']}\n{players['8']}\n"
+
+    #Send finally composed message
+    await ctx.send(embed = discord.Embed(description = str(player_list)))
+
+@client.command()
+async def teamaccept(ctx):
+    if 'signup' not in str(ctx.channel.name):return
+
+    await ctx.channel.edit(name = str(str('🟩')+str(ctx.channel.name)).replace('🟥'))
+
+    await ctx.send(embed = discord.Embed(description = '**SUCCESS** : Team verified  for event'))
+
+@client.command()
+async def teamdecline(ctx):
+    if 'signup' not in str(ctx.channel.name):return
+
+    await ctx.channel.edit(name = str(str('🟥')+str(ctx.channel.name)).replace('🟩'))
+
+    await ctx.send(embed = discord.Embed(description = '**SUCCESS** : Team verified  for event'))
+
 
 @client.command()
 async def newevent(ctx):
@@ -97,7 +131,7 @@ async def on_select_option(interaction):
 
         #Sending message et that user needs to reply to
         await interaction.respond(embed = discord.Embed(description = f'```md\nReply with the inteded content for the <{(str(interaction.values[0]).split("_")[1]).capitalize()}>```'))
-        
+
         #Waiting for user replying to message
         def check(m):
             return m.author.id == interaction.user.id
@@ -116,9 +150,9 @@ async def on_select_option(interaction):
         #updating embed
         await interaction.message.edit(embed = embed,components=[Select(options=[SelectOption(label="Title", value="set_title", default=False),SelectOption(label="Description", value="set_description", default=False),SelectOption(label="Image", value="set_image", default=False),SelectOption(label="Footer", value="set_footer", default=False),],max_values = 1, min_values= 0, placeholder= 'Select an option',id = 'event_embed_maker'),Button(label="✔️Generate event", custom_id=f"send_embed",style='3')])
     if 'player' in str(interaction.values):
-        #Fetching the player list message   
+        #Fetching the player list message
         first_message = [message async for message in interaction.channel.history(limit=2, oldest_first=True)]
-        
+
         #Fetching player list
         player_list = await fetch_players(first_message[0])
 
@@ -132,18 +166,18 @@ async def on_select_option(interaction):
         discord_emoji = discord.utils.get(interaction.guild.emojis, name = 'discord')
         steam_emoji = discord.utils.get(interaction.guild.emojis, name = 'steam')
 
-        #Updating player list message 
+        #Updating player list message
         new_player_list = ''
         for x in range(0,player_limit):
             new_player_list += f'Player {x+1} -> {player_list[str(x+1)]}\n'
         await first_message[0].edit(embed = discord.Embed(description = f'{interaction.user.mention}\nSyntax -> {steam_emoji} - {discord_emoji}```{new_player_list}``````md\n⬇️ Use the <Buttons> below to control the player panel```'))
-        
+
 
 
 @client.event
 async def on_button_click(interaction):
     if 'send_embed' == str(interaction.custom_id):
-        #Fetching signup channel 
+        #Fetching signup channel
         signup_channel = discord.utils.get(interaction.guild.channels, name= 'event-signup')
 
         #Responding to interaction
@@ -157,7 +191,7 @@ async def on_button_click(interaction):
     if 'join_event' == str(interaction.custom_id):
 
         category= discord.utils.get(interaction.guild.channels, name=f'signup-tickets')
-        
+
         #for channel in category.channels:
         #    if str(channel.name).split("-",1)[1] == str(interaction.user.id):
         #        await interaction.respond(embed = discord.Embed(description = f'You already have a ticket open <#{channel.id}>'));return
@@ -168,7 +202,7 @@ async def on_button_click(interaction):
         #Responding to interaction
         await interaction.respond(embed = discord.Embed(description = f'**SUCCESS** : Signup ticket created -> <#{channel.id}>'))
 
-        #Fetching emojis 
+        #Fetching emojis
         discord_emoji = discord.utils.get(interaction.guild.emojis, name = 'discord')
         steam_emoji = discord.utils.get(interaction.guild.emojis, name = 'steam')
 
@@ -177,16 +211,20 @@ async def on_button_click(interaction):
         for x in range(0,player_limit):
             player_list += f'Player {x+1} -> None\n'
         await channel.send(embed = discord.Embed(description = f'{interaction.user.mention}\nSyntax -> {steam_emoji} - {discord_emoji}```{player_list}``````md\n⬇️ Use the <Buttons> below to control the player panel```'),components=[Button(label="✔️Add player", custom_id=f"add_playerpanel",style='3'),Button(label="❌Remove player", custom_id=f"remove_playerpanel",style='4')])
-    
+
     if 'add_playerpanel' == str(interaction.custom_id):
-        #Fetching player list 
+        #Fetching player list
         player_list = await fetch_players(interaction.message)
 
         #Cheking if player list is filled up
         if 'None' not in str(player_list):await interaction.respond(embed = discord.Embed(description = '**ERROR** : Your team is filled up ```Use the "❌Remove player" button to remove players from the roster```'));return
-        
+
         #Sending message for response in interaction channel
-        await interaction.respond(embed = discord.Embed(description = '**SUCCESS** : Respond to this message with the players steam id and discord id\n```Syntax -> steamid-discordid```\n```Ex -> 284678179011035136-76561198391325594```'))
+        embed = discord.Embed(description = '**SUCCESS** : Respond to this message with the players steam id and discord id\n```Syntax -> steamid-discordid\nEx -> 284678179011035136-76561198391325594```')
+
+
+        embed.add_field(name="How to get steam/discord id", value="[Discord id](https://www.remote.tools/remote-work/how-to-find-discord-id)\n[Steamid64](https://steamid.io/)")
+        await interaction.respond(embed = embed)
 
         def steamid_check(steam_id):
             r = requests.get(url = f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=370271383631C9089D74EBA5806050F9&format=json&steamids={steam_id}')
@@ -197,14 +235,14 @@ async def on_button_click(interaction):
                 await client.fetch_user(discord_id);return 1
             except: return None
 
-        #Waiting for player to respond with player steam id and discord id 
+        #Waiting for player to respond with player steam id and discord id
         def check(m):
             return m.author.id == interaction.user.id and '->' not in m.content
 
         msg = await client.wait_for('message', check=check)
 
         #Checking is discord and steam id are valid
-        
+
         if steamid_check(str(msg.content).split("-")[0]) != False: await interaction.channel.send(embed = discord.Embed(description = f'**ERROR** : `{str(msg.content).split("-")[0]}` is not a valid steamID64'));return
         if await discordid_check(str(msg.content).split("-")[1]) == None: await interaction.channel.send(embed = discord.Embed(description = f'**ERROR** : `{str(msg.content).split("-")[1]}` is not a valid discord id```NOTE: User has to be in the discord```' ));return
 
@@ -217,17 +255,17 @@ async def on_button_click(interaction):
         #Fetching icon
         discord_emoji = discord.utils.get(interaction.guild.emojis, name = 'discord')
         steam_emoji = discord.utils.get(interaction.guild.emojis, name = 'steam')
-        
+
         #Updating message with players
         new_player_list = ''
         for x in range(0,player_limit):
             new_player_list += f'Player {x+1} -> {player_list[str(x+1)]}\n'
         await interaction.message.edit(embed = discord.Embed(description = f'{interaction.user.mention}\nSyntax -> {steam_emoji} - {discord_emoji}```{new_player_list}``````md\n⬇️ Use the <Buttons> below to control the player panel```'),components=[Button(label="✔️Add player", custom_id=f"add_playerpanel",style='3'),Button(label="❌Remove player", custom_id=f"remove_playerpanel",style='4')])
-    
+
     if 'remove_playerpanel' == str(interaction.custom_id):
         #Responding to interaction
         await interaction.respond(embed = discord.Embed(description = '**SUCCESS** : ⬇️Use the dropdown below to to choose a player for removal'),components=[Select(options=[SelectOption(label="Player 1", value="player1", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 2", value="player2", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 3", value="player3", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 4", value="player4", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 5", value="player5", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 6", value="player6", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 7", value="player7", default=False,emoji='🙍‍♂️'),SelectOption(label="Player 8", value="player8", default=False)])])
-    
+
     #Fetching channel
     channel = await client.fetch_channel(1000590770442616922)
     guild = channel.guild
@@ -236,24 +274,24 @@ async def on_button_click(interaction):
     discord_embed.set_footer(text=str(interaction.message.embeds[0].footer.text))
 
     if 'confirmation_✔️Yes' == str(interaction.custom_id):
-    
+
         #Sending embed in channel
         await channel.send(embed = discord.Embed(description = f'**{interaction.user}** pressed `{str(interaction.custom_id).split("_")[1]}` in their dm confirmation message\n\n`Discord id` -> {interaction.user.id}\n`Signup channel` -> {discord.utils.get(guild.channels, name = f"signup-{interaction.user.id}").mention}', color = 0x2bff00,timestamp = datetime.datetime.now()))
-        
+
         #Responding to intercation
         await interaction.respond(embed = discord.Embed(description = '**SUCCESS** : Accepted'))
-        
+
         #Editing message dissable buttons
         await interaction.message.edit(embed = discord_embed,components=[
             [Button(label="✔️Yes", custom_id=f"confirmation_✔️Yes",style='3', disabled = True),
             Button(label="❌No", custom_id=f"confirmation_❌No",style='4', disabled = True)]
             ])
 
-   
-    if 'confirmation_❌No' == str(interaction.custom_id):   
+
+    if 'confirmation_❌No' == str(interaction.custom_id):
         #Sending embed in channel
         await channel.send(embed = discord.Embed(description = f'**{interaction.user}** pressed `{str(interaction.custom_id).split("_")[1]}` in their dm confirmation message\n\n`Discord id` -> {interaction.user.id}\n`Signup channel` -> {discord.utils.get(guild.channels, name = f"signup-{interaction.user.id}").mention}', color = 0xff0022,timestamp = datetime.datetime.now()))
-        
+
         #Responding to intercation
         await interaction.respond(embed = discord.Embed(description = '**SUCCESS** : Declined'))
 
@@ -265,32 +303,32 @@ async def on_button_click(interaction):
 
 @client.command()
 async def dm(ctx):
-    #Fetching signup category 
+    #Fetching signup category
     signup_cat = discord.utils.get(ctx.guild.channels, name = 'signup-tickets')
-    
+
     #Fetching message
     try:
         message = str(ctx.message.content).split(" ",1)[1]
-    except: 
+    except:
         await ctx.channel.send(embed = discord.Embed(description = '**ERROR** : Follow the correct format ```Format : !dm insert_message```'));return
 
     for x in signup_cat.channels:
-        #Fetching user 
+        #Fetching user
         print(str(x.name))
         user = await ctx.guild.fetch_member((str(x.name).split('-')[1]))
 
-        #Contrstructing embed 
+        #Contrstructing embed
         discord_embed = discord.Embed(description = f'**Hey** `{user}`,\n```{message}``````md\n⬇️ Use the buttons underneath to react with the fitting response```')
         discord_embed.set_footer(text="Shephard's Villa - 2022")
 
-        #Sending message to user 
+        #Sending message to user
         await user.send(embed = discord_embed,
         components=[
             [Button(label="✔️Yes", custom_id=f"confirmation_✔️Yes",style='3'),
             Button(label="❌No", custom_id=f"confirmation_❌No",style='4')]
             ])
 
-@client.event 
+@client.event
 async def on_command_error(ctx, error):
     print(error)
     error_channel = discord.utils.get(ctx.guild.channels, name = 'error-handling')
